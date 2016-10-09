@@ -12,6 +12,8 @@ The scripts are `scripts/build.cmd` and `scripts/release.cmd` respectively.
 
 ## Example
 
+![](/stuff/bob1.gif)
+
 I `cd` my way to `C:\Projects-Rebus\Rebus.AutoScaling` which is where Rebus' auto-scaling plugin resides.
 
 Then I 
