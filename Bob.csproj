@@ -44,7 +44,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Spinnerino, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Spinnerino.1.0.2\lib\NET45\Spinnerino.dll</HintPath>
+      <HintPath>packages\Spinnerino.1.0.3\lib\NET45\Spinnerino.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -57,11 +57,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BaseCommand.cs" />
+    <Compile Include="Commands\BaseCommand.cs" />
     <Compile Include="Commands\BuildCommand.cs" />
-    <Compile Include="ChangeLogEntry.cs" />
+    <Compile Include="Model\ChangeLogEntry.cs" />
     <Compile Include="Commands\ReleaseCommand.cs" />
-    <Compile Include="ProcessExtensions.cs" />
+    <Compile Include="Extensions\ProcessExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

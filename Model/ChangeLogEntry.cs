@@ -2,7 +2,7 @@
 using System.Linq;
 using Semver;
 
-namespace Bob
+namespace Bob.Model
 {
     class ChangeLogEntry
     {

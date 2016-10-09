@@ -6,11 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Timers;
+using Bob.Model;
 using GoCommando;
 using Semver;
 using Spinnerino;
 
-namespace Bob
+namespace Bob.Commands
 {
     public abstract class BaseCommand
     {
@@ -26,6 +27,10 @@ namespace Bob
             {
                 InnerRun(script, projectName, currentDirectory, createTag);
             }
+            catch (GoCommandoException)
+            {
+                throw;
+            }
             catch (Exception exception)
             {
                 throw new GoCommandoException($@"Unhandled error: {exception}
@@ -40,7 +45,10 @@ Log:
         {
             if (!File.Exists(script))
             {
-                throw new GoCommandoException($"Could not find build script: '{script}'");
+                throw new GoCommandoException($@"Could not find script: '{script}'.
+
+Please create the script at the path shown above, and make it so that
+it correctly accepts a project name and a version as its arguments.");
             }
 
             PrintIfVerbose($"Building '{projectName}' in '{currentDirectory}'");
@@ -63,7 +71,7 @@ Log:
 
             Console.WriteLine($"EXEC> {script} {arguments}");
 
-            using (Verbose ? (IDisposable)new DummyDisposable() : new IndefiniteProgressBar())
+            using (Verbose ? (IDisposable)new DummyDisposable() : new IndefiniteSpinner())
             {
                 ShellExecute(currentDirectory, script, arguments);
 
@@ -184,7 +192,28 @@ Log:
             }
             catch (FileNotFoundException)
             {
-                throw new GoCommandoException($"Could not find '{path}'");
+                throw new GoCommandoException($@"Could not find changelog '{path}'.
+
+Please create a changelog at the path shown above, and use a format where
+versions are added like this:
+
+    ## <version>
+
+    * changelog line 1
+    * changelog line 2
+
+e.g. like this:
+
+    ## 1.0.4
+
+    * Fix subtle bug
+    * Fix another thing
+
+    ## 1.1.0
+
+    * Add some function
+
+etc.");
             }
         }
 
@@ -284,7 +313,7 @@ Log:
         static string TrimHeaderAndFooter(string changelog)
         {
             var indexOfFirstEntry = changelog.IndexOf("##");
-            if (indexOfFirstEntry <= 0) throw new GoCommandoException("Could not find any entries in changelog");
+            if (indexOfFirstEntry < 0) throw new GoCommandoException("Could not find any entries in changelog");
 
             var withoutHeader = changelog.Substring(indexOfFirstEntry);
             var indexOfFooterMark = withoutHeader.IndexOf("---");

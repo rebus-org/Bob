@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Bob
+namespace Bob.Extensions
 {
     public static class ProcessExtensions
     {
