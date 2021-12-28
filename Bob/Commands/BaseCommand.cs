@@ -104,9 +104,9 @@ it correctly accepts a project name and a version as its arguments.");
         }
 
         using var outputTimer = new Timer(1000);
-            
+
         var invoking = false;
-            
+
         outputTimer.Elapsed += delegate
         {
             if (invoking) return;
@@ -124,7 +124,12 @@ it correctly accepts a project name and a version as its arguments.");
         };
         outputTimer.Start();
 
-        process.WaitForExit();
+        var executionTimeout = TimeSpan.FromMinutes(5);
+
+        if (!process.WaitForExit(milliseconds: (int)executionTimeout.TotalMilliseconds))
+        {
+            throw new GoCommandoException($"Process for command {fileName} {arguments} did not exit within timeout of {executionTimeout}");
+        }
 
         if (process.ExitCode != 0)
         {
