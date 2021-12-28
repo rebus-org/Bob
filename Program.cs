@@ -1,12 +1,4 @@
 ﻿using GoCommando;
+// ReSharper disable UnusedMember.Global
 
-namespace Bob
-{
-    class Program
-    {
-        static void Main()
-        {
-            Go.Run();
-        }
-    }
-}
+Go.Run();

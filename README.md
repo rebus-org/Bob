@@ -18,13 +18,17 @@ I `cd` my way to `C:\Projects-Rebus\Rebus.AutoScaling` which is where Rebus' aut
 
 Then I 
 
-	C:\Projects-Rebus\Rebus.AutoScaling>bob build
+```dos
+C:\Projects-Rebus\Rebus.AutoScaling>bob build
+```
 
 which outputs something like this:
 
-	EXEC> C:\Projects-Rebus\Rebus.AutoScaling\scripts\build.cmd Rebus.AutoScaling 2.0.0
+```dos
+EXEC> C:\Projects-Rebus\Rebus.AutoScaling\scripts\build.cmd Rebus.AutoScaling 2.0.0
 
-	OK :)
+OK :)
+```
 
 indicating that `scripts/build.cmd` was invoked with the name of the project and a version as arguments.
 
@@ -33,14 +37,16 @@ The name of the project is deduced from the name of the directory, and the versi
 
 The changelog is assumed to follow this format:
 
-	## <semver-version>
+```
+## <semver-version>
 
-	* changelog line
-	* changelog line
+* changelog line
+* changelog line
 
-	## <semver-version>
+## <semver-version>
 
-	* changelog line
-	* changelog line
+* changelog line
+* changelog line
+```
 
 etc.

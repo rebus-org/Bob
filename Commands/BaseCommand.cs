@@ -1,198 +1,191 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Timers;
-using Bob.Model;
+﻿using Bob.Model;
 using GoCommando;
 using Semver;
 using Spinnerino;
+// ReSharper disable ArgumentsStyleLiteral
 
-namespace Bob.Commands
+namespace Bob.Commands;
+
+public abstract class BaseCommand
 {
-    public abstract class BaseCommand
+    [Parameter("verbose", "v", optional: true)]
+    [Description("Toggles whether to print the full output when running the build")]
+    public bool Verbose { get; set; }
+
+    readonly ConcurrentQueue<string> _log = new();
+
+    protected void Run(string script, string projectName, string currentDirectory, bool createTag)
     {
-        [Parameter("verbose", "v", optional: true)]
-        [Description("Toggles whether to print the full output when running the build")]
-        public bool Verbose { get; set; }
-
-        readonly ConcurrentQueue<string> _log = new ConcurrentQueue<string>();
-
-        protected void Run(string script, string projectName, string currentDirectory, bool createTag)
+        try
         {
-            try
-            {
-                InnerRun(script, projectName, currentDirectory, createTag);
-            }
-            catch (GoCommandoException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                throw new GoCommandoException($@"Unhandled error: {exception}
+            InnerRun(script, projectName, currentDirectory, createTag);
+        }
+        catch (GoCommandoException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw new GoCommandoException($@"Unhandled error: {exception}
 
 Log:
 
 {string.Join(Environment.NewLine, _log)}");
-            }
         }
+    }
 
-        void InnerRun(string script, string projectName, string currentDirectory, bool createTag)
+    void InnerRun(string script, string projectName, string currentDirectory, bool createTag)
+    {
+        if (!File.Exists(script))
         {
-            if (!File.Exists(script))
-            {
-                throw new GoCommandoException($@"Could not find script: '{script}'.
+            throw new GoCommandoException($@"Could not find script: '{script}'.
 
 Please create the script at the path shown above, and make it so that
 it correctly accepts a project name and a version as its arguments.");
-            }
+        }
 
-            PrintIfVerbose($"Building '{projectName}' in '{currentDirectory}'");
+        PrintIfVerbose($"Building '{projectName}' in '{currentDirectory}'");
 
-            var changelog = ReadChangelog(currentDirectory);
+        var changelog = ReadChangelog(currentDirectory);
 
-            var versions = ParseChangelog(changelog).ToList();
+        var versions = ParseChangelog(changelog).ToList();
 
-            PrintIfVerbose($"Found {versions.Count} versions");
+        PrintIfVerbose($"Found {versions.Count} versions");
 
-            var lastVersion = versions.Last();
+        var lastVersion = versions.Last();
 
-            PrintIfVerbose($@"Building version:
+        PrintIfVerbose($@"Building version:
 
 {lastVersion}
 
 ");
 
-            var arguments = $"{projectName} {lastVersion.Version}";
+        var arguments = $"{projectName} {lastVersion.Version}";
 
-            Console.WriteLine($"EXEC> {script} {arguments}");
+        Console.WriteLine($"EXEC> {script} {arguments}");
 
-            using (Verbose ? (IDisposable)new DummyDisposable() : new IndefiniteSpinner())
-            {
-                ShellExecute(currentDirectory, script, arguments);
-
-                if (createTag)
-                {
-                    CreateTag(lastVersion, currentDirectory);
-                }
-            }
-
-            Console.WriteLine("OK :)");
-        }
-
-        void PrintIfVerbose(string text)
+        using (Verbose ? (IDisposable)new DummyDisposable() : new IndefiniteSpinner())
         {
-            if (!Verbose) return;
-            Console.WriteLine(text);
-        }
+            ShellExecute(currentDirectory, script, arguments);
 
-        void ShellExecute(string currentDirectory, string fileName, string arguments)
-        {
-            var buildStartInfo = new ProcessStartInfo
+            if (createTag)
             {
-                FileName = fileName,
-                Arguments = arguments,
-                WorkingDirectory = currentDirectory,
-
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-
-            var process = Process.Start(buildStartInfo);
-
-            if (process == null)
-            {
-                throw new GoCommandoException($"Could not start process with command {fileName} {arguments}");
-            }
-
-            using (var outputTimer = new Timer(1000))
-            {
-                var invoking = false;
-                outputTimer.Elapsed += delegate
-                {
-                    if (invoking) return;
-
-                    invoking = true;
-
-                    try
-                    {
-                        PumpOutput(process);
-                    }
-                    finally
-                    {
-                        invoking = false;
-                    }
-                };
-                outputTimer.Start();
-
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
-                {
-                    outputTimer.Stop();
-
-                    PumpOutput(process);
-
-                    throw new GoCommandoException($"Process for command {fileName} {arguments} exited with code {process.ExitCode}");
-                }
+                CreateTag(lastVersion, currentDirectory);
             }
         }
 
-        void PumpOutput(Process process)
+        Console.WriteLine("OK :)");
+    }
+
+    void PrintIfVerbose(string text)
+    {
+        if (!Verbose) return;
+        Console.WriteLine(text);
+    }
+
+    void ShellExecute(string currentDirectory, string fileName, string arguments)
+    {
+        var buildStartInfo = new ProcessStartInfo
         {
-            string line;
+            FileName = fileName,
+            Arguments = arguments,
+            WorkingDirectory = currentDirectory,
 
-            while ((line = process.StandardOutput.ReadLine()) != null)
-            {
-                _log.Enqueue(line);
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
 
-                if (Verbose)
-                {
-                    Console.WriteLine(line);
-                }
-            }
+        var process = Process.Start(buildStartInfo);
 
-            while ((line = process.StandardError.ReadLine()) != null)
-            {
-                _log.Enqueue(line);
-
-                if (Verbose)
-                {
-                    Console.WriteLine(line);
-                }
-            }
+        if (process == null)
+        {
+            throw new GoCommandoException($"Could not start process with command {fileName} {arguments}");
         }
 
-        void CreateTag(ChangeLogEntry lastVersion, string currentDirectory)
+        using var outputTimer = new Timer(1000);
+            
+        var invoking = false;
+            
+        outputTimer.Elapsed += delegate
         {
-            var tagMessage = string.Join(Environment.NewLine, lastVersion.Bullets.Select(text => $"* {text}"));
-            var tempFilePath = Path.GetTempFileName();
+            if (invoking) return;
 
-            File.WriteAllText(tempFilePath, tagMessage, Encoding.UTF8);
-
-            Console.WriteLine($"Tag message written to {tempFilePath}");
-
-            ShellExecute(currentDirectory, "git", $@"tag {lastVersion.Version} -a -F ""{tempFilePath}""");
-
-            ShellExecute(currentDirectory, "git", @"push --tags");
-        }
-
-        static string ReadChangelog(string currentDirectory)
-        {
-            var path = Path.Combine(currentDirectory, "CHANGELOG.md");
+            invoking = true;
 
             try
             {
-                return File.ReadAllText(path);
+                PumpOutput(process);
             }
-            catch (FileNotFoundException)
+            finally
             {
-                throw new GoCommandoException($@"Could not find changelog '{path}'.
+                invoking = false;
+            }
+        };
+        outputTimer.Start();
+
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+            outputTimer.Stop();
+
+            PumpOutput(process);
+
+            throw new GoCommandoException($"Process for command {fileName} {arguments} exited with code {process.ExitCode}");
+        }
+    }
+
+    void PumpOutput(Process process)
+    {
+        string line;
+
+        while ((line = process.StandardOutput.ReadLine()) != null)
+        {
+            _log.Enqueue(line);
+
+            if (Verbose)
+            {
+                Console.WriteLine(line);
+            }
+        }
+
+        while ((line = process.StandardError.ReadLine()) != null)
+        {
+            _log.Enqueue(line);
+
+            if (Verbose)
+            {
+                Console.WriteLine(line);
+            }
+        }
+    }
+
+    void CreateTag(ChangeLogEntry lastVersion, string currentDirectory)
+    {
+        var tagMessage = string.Join(Environment.NewLine, lastVersion.Bullets.Select(text => $"* {text}"));
+        var tempFilePath = Path.GetTempFileName();
+
+        File.WriteAllText(tempFilePath, tagMessage, Encoding.UTF8);
+
+        Console.WriteLine($"Tag message written to {tempFilePath}");
+
+        ShellExecute(currentDirectory, "git", $@"tag {lastVersion.Version} -a -F ""{tempFilePath}""");
+
+        ShellExecute(currentDirectory, "git", @"push --tags");
+    }
+
+    static string ReadChangelog(string currentDirectory)
+    {
+        var path = Path.Combine(currentDirectory, "CHANGELOG.md");
+
+        try
+        {
+            return File.ReadAllText(path);
+        }
+        catch (FileNotFoundException)
+        {
+            throw new GoCommandoException($@"Could not find changelog '{path}'.
 
 Please create a changelog at the path shown above, and use a format where
 versions are added like this:
@@ -214,13 +207,13 @@ e.g. like this:
     * Add some function
 
 etc.");
-            }
         }
+    }
 
-        static IEnumerable<ChangeLogEntry> ParseChangelog(string changelog)
-        {
-            #region Example
-            /*
+    static IEnumerable<ChangeLogEntry> ParseChangelog(string changelog)
+    {
+        #region Example
+        /*
 ## 0.99.73
 
 * Add GZIPping capability to data bus storage - can be enabled by attaching `.UseCompression()` in the data bus configuration builder
@@ -258,85 +251,84 @@ etc.");
 ## 2.0.0-a10
 
 * Experimentally multi-targeting .NET 4.5, 4.5.2, 4.6, and 4.6.1 (but it dit NOT work for 4.6 and 4.6.1)
-             */
-            #endregion
+         */
+        #endregion
 
-            var entriesText = TrimHeaderAndFooter(changelog);
+        var entriesText = TrimHeaderAndFooter(changelog);
 
-            return entriesText.Split(new[] { "##" }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(ParseEntryOrNull)
-                .Where(entry => entry != null);
-        }
+        return entriesText.Split(new[] { "##" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(ParseEntryOrNull)
+            .Where(entry => entry != null);
+    }
 
-        static ChangeLogEntry ParseEntryOrNull(string entriesText)
-        {
-            /*
- 2.0.0-a1
+    static ChangeLogEntry ParseEntryOrNull(string entriesText)
+    {
+        /*
+2.0.0-a1
 
 * Test release
-            */
+        */
 
-            try
+        try
+        {
+            var lines = entriesText.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            var versionString = lines.First().Trim();
+
+            if (versionString.StartsWith("<")) return null;
+
+            var version = SemVersion.Parse(versionString);
+            var bulletLines = lines.Skip(1);
+            var bullets = bulletLines
+                .Select(text => text.Trim())
+                .Where(text => text.StartsWith("*"))
+                .Select(text => text.Substring(1).Trim())
+                .Where(text => !string.IsNullOrWhiteSpace(text))
+                .ToArray();
+
+            if (bullets.Length == 0)
             {
-                var lines = entriesText.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-                var versionString = lines.First().Trim();
-
-                if (versionString.StartsWith("<")) return null;
-
-                var version = SemVersion.Parse(versionString);
-                var bulletLines = lines.Skip(1);
-                var bullets = bulletLines
-                    .Select(text => text.Trim())
-                    .Where(text => text.StartsWith("*"))
-                    .Select(text => text.Substring(1).Trim())
-                    .Where(text => !string.IsNullOrWhiteSpace(text))
-                    .ToArray();
-
-                if (bullets.Length == 0)
-                {
-                    throw new FormatException($"No bullets for version {versionString}");
-                }
-
-                return new ChangeLogEntry(version, bullets);
+                throw new FormatException($"No bullets for version {versionString}");
             }
-            catch (Exception exception)
-            {
-                throw new FormatException($@"Invalid changelog entry format:
+
+            return new ChangeLogEntry(version, bullets);
+        }
+        catch (Exception exception)
+        {
+            throw new FormatException($@"Invalid changelog entry format:
 <entry>
 {entriesText}
 </entry>
 ", exception);
-            }
-
         }
 
-        static string TrimHeaderAndFooter(string changelog)
+    }
+
+    static string TrimHeaderAndFooter(string changelog)
+    {
+        var indexOfFirstEntry = changelog.IndexOf("##");
+        if (indexOfFirstEntry < 0) throw new GoCommandoException("Could not find any entries in changelog");
+
+        var withoutHeader = changelog.Substring(indexOfFirstEntry);
+        var indexOfFooterMark = withoutHeader.IndexOf("---");
+        if (indexOfFooterMark <= 0) return withoutHeader;
+
+        var withoutFooter = withoutHeader.Substring(0, indexOfFooterMark - 1);
+        return withoutFooter;
+    }
+
+    protected void Run(string scriptToRun, bool createTag = false)
+    {
+        var currentDirectory = Environment.CurrentDirectory;
+        var projectName = currentDirectory.Split(Path.DirectorySeparatorChar).Last();
+        var script = Path.Combine(currentDirectory, "scripts", scriptToRun);
+
+        Run(script, projectName, currentDirectory, createTag);
+    }
+
+    class DummyDisposable : IDisposable
+    {
+        public void Dispose()
         {
-            var indexOfFirstEntry = changelog.IndexOf("##");
-            if (indexOfFirstEntry < 0) throw new GoCommandoException("Could not find any entries in changelog");
-
-            var withoutHeader = changelog.Substring(indexOfFirstEntry);
-            var indexOfFooterMark = withoutHeader.IndexOf("---");
-            if (indexOfFooterMark <= 0) return withoutHeader;
-
-            var withoutFooter = withoutHeader.Substring(0, indexOfFooterMark - 1);
-            return withoutFooter;
-        }
-
-        protected void Run(string scriptToRun, bool createTag = false)
-        {
-            var currentDirectory = Environment.CurrentDirectory;
-            var projectName = currentDirectory.Split(Path.DirectorySeparatorChar).Last();
-            var script = Path.Combine(currentDirectory, "scripts", scriptToRun);
-
-            Run(script, projectName, currentDirectory, createTag);
-        }
-
-        class DummyDisposable : IDisposable
-        {
-            public void Dispose()
-            {
-            }
         }
     }
 }

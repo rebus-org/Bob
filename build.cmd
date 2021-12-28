@@ -1,4 +1,3 @@
 @echo off
 
-msbuild Bob.sln /p:Configuration=Release
-
+dotnet publish -c Release

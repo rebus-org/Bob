@@ -1,24 +1,21 @@
-﻿using System;
-using System.Linq;
-using Semver;
+﻿using Semver;
 
-namespace Bob.Model
+namespace Bob.Model;
+
+class ChangeLogEntry
 {
-    class ChangeLogEntry
+    public ChangeLogEntry(SemVersion version, string[] bullets)
     {
-        public ChangeLogEntry(SemVersion version, string[] bullets)
-        {
-            Version = version;
-            Bullets = bullets;
-        }
+        Version = version;
+        Bullets = bullets;
+    }
 
-        public SemVersion Version { get; }
-        public string[] Bullets { get; }
+    public SemVersion Version { get; }
+    public string[] Bullets { get; }
 
-        public override string ToString()
-        {
-            return $@"===== {Version} =====
+    public override string ToString()
+    {
+        return $@"===== {Version} =====
 {string.Join(Environment.NewLine, Bullets.Select(bullet => $" * {bullet}"))}";
-        }
     }
 }
