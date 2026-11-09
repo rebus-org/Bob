@@ -9,7 +9,6 @@
 		<PackAsTool>true</PackAsTool>
 		<ToolCommandName>bob</ToolCommandName>
 		<PackageId>Bob.The.Builder</PackageId>
-		<Version>1.0.0</Version>
 		<Authors>Mogens Heller Grabe</Authors>
 		<Company>Rebus FM</Company>
 		<Description>Bob is a build tool that invokes scripts/build and scripts/release in the current repository, passing the project name and the latest version from CHANGELOG.md as arguments.</Description>
@@ -23,6 +22,18 @@
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
+
+	<!--
+		The SDK defaults the version to 1.0.0 (in its .targets, i.e. after this point), so we capture here whether
+		a version was given explicitly (e.g. with -p:Version=1.2.3), and refuse to pack without one
+	-->
+	<PropertyGroup>
+		<_ExplicitVersion>$(Version)$(VersionPrefix)</_ExplicitVersion>
+	</PropertyGroup>
+
+	<Target Name="EnsureVersionWhenPacking" BeforeTargets="GenerateNuspec">
+		<Error Condition="'$(_ExplicitVersion)' == ''" Text="No version specified - please pack with a version, e.g. 'dotnet pack -p:Version=1.2.3' (or 'build.cmd 1.2.3')" />
+	</Target>
 
 	<ItemGroup>
 		<Using Include="System" />
