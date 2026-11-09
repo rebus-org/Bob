@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#26305a"/>
+      <stop offset="1" stop-color="#0b0f1f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.58" r="0.5">
+      <stop offset="0" stop-color="#ffb000" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffb000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="dome" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe066"/>
+      <stop offset="0.55" stop-color="#ffb300"/>
+      <stop offset="1" stop-color="#e87800"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="1" stop-color="#ffc933"/>
+    </linearGradient>
+    <linearGradient id="brim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffbe1a"/>
+      <stop offset="1" stop-color="#c25e00"/>
+    </linearGradient>
+    <clipPath id="bgClip"><rect width="512" height="512" rx="112"/></clipPath>
+    <clipPath id="domeClip">
+      <path d="M128 330 C128 228 182 156 256 156 C330 156 384 228 384 330 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+
+  <!-- subtle hazard stripes in the lower corner -->
+  <g opacity="0.10" clip-path="url(#bgClip)">
+    <path d="M300 512 L512 300 L512 340 L340 512 Z M380 512 L512 380 L512 420 L420 512 Z M460 512 L512 460 L512 500 L500 512 Z" fill="#ffc400"/>
+  </g>
+
+  <!-- helmet, scaled up around the center of the icon -->
+  <g transform="translate(256 276) scale(1.2) translate(-256 -262)">
+
+  <!-- shadow below the helmet -->
+  <ellipse cx="256" cy="372" rx="164" ry="12" fill="#000" opacity="0.45"/>
+
+  <!-- dome -->
+  <path d="M128 330 C128 228 182 156 256 156 C330 156 384 228 384 330 Z" fill="url(#dome)"/>
+
+  <g clip-path="url(#domeClip)">
+    <!-- side ribs -->
+    <path d="M190 330 C188 270 204 210 236 172" fill="none" stroke="#c96500" stroke-width="7" stroke-linecap="round" opacity="0.45"/>
+    <path d="M322 330 C324 270 308 210 276 172" fill="none" stroke="#c96500" stroke-width="7" stroke-linecap="round" opacity="0.45"/>
+    <!-- center ridge -->
+    <path d="M234 150 L278 150 L290 330 L222 330 Z" fill="url(#ridge)"/>
+    <path d="M278 150 L290 330 L280 330 L270 150 Z" fill="#d97a00" opacity="0.35"/>
+    <!-- glossy highlight -->
+    <path d="M150 300 C150 236 180 190 222 172 C190 204 174 250 172 300 Z" fill="#fff" opacity="0.45"/>
+  </g>
+
+  <!-- brim -->
+  <path d="M100 326 Q256 302 412 326 Q430 330 428 346 Q425 366 404 366 L108 366 Q87 366 84 346 Q82 330 100 326 Z" fill="url(#brim)"/>
+  <path d="M104 330 Q256 308 408 330" fill="none" stroke="#fff3b0" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- badge -->
+  <circle cx="256" cy="262" r="38" fill="#141a33" stroke="#fff3b0" stroke-width="5"/>
+  <text x="256" y="281" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="900" font-size="54" fill="#ffc400">B</text>
+
+  </g>
+</svg>

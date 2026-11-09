@@ -14,6 +14,7 @@
 		<Description>Bob is a build tool that invokes scripts/build and scripts/release in the current repository, passing the project name and the latest version from CHANGELOG.md as arguments.</Description>
 		<PackageTags>rebus;build;release;changelog;tool</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>icon.png</PackageIcon>
 		<RepositoryUrl>https://github.com/rebus-org/Bob</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/rebus-org/Bob</PackageProjectUrl>
 		<PackageOutputPath>$(MSBuildThisFileDirectory)..\artifacts</PackageOutputPath>
@@ -21,6 +22,7 @@
 
 	<ItemGroup>
 		<None Include="..\README.md" Pack="true" PackagePath="\" />
+		<None Include="..\stuff\icon.png" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<!--
