@@ -29,6 +29,7 @@
 	-->
 	<PropertyGroup>
 		<_ExplicitVersion>$(Version)$(VersionPrefix)</_ExplicitVersion>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<Target Name="EnsureVersionWhenPacking" BeforeTargets="GenerateNuspec">
