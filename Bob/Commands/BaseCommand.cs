@@ -1,5 +1,4 @@
 ﻿using Bob.Model;
-using GoCommando;
 using Semver;
 using Spinnerino;
 // ReSharper disable ArgumentsStyleLiteral
@@ -8,9 +7,12 @@ namespace Bob.Commands;
 
 public abstract class BaseCommand
 {
-    [Parameter("verbose", "v", optional: true)]
-    [Description("Toggles whether to print the full output when running the build")]
+    /// <summary>
+    /// Toggles whether to print the full output when running the build
+    /// </summary>
     public bool Verbose { get; set; }
+
+    public abstract void Run();
 
     readonly ConcurrentQueue<string> _log = new();
 
@@ -20,13 +22,13 @@ public abstract class BaseCommand
         {
             InnerRun(script, projectName, currentDirectory, createTag);
         }
-        catch (GoCommandoException)
+        catch (BobException)
         {
             throw;
         }
         catch (Exception exception)
         {
-            throw new GoCommandoException($@"Unhandled error: {exception}
+            throw new BobException($@"Unhandled error: {exception}
 
 Log:
 
@@ -38,7 +40,7 @@ Log:
     {
         if (!File.Exists(script))
         {
-            throw new GoCommandoException($@"Could not find script: '{script}'.
+            throw new BobException($@"Could not find script: '{script}'.
 
 Please create the script at the path shown above, and make it so that
 it correctly accepts a project name and a version as its arguments.");
@@ -66,7 +68,9 @@ it correctly accepts a project name and a version as its arguments.");
 
         using (Verbose ? (IDisposable)new DummyDisposable() : new IndefiniteSpinner())
         {
-            ShellExecute(currentDirectory, script, arguments);
+            var (fileName, fullArguments) = GetScriptInvocation(script, arguments);
+
+            ShellExecute(currentDirectory, fileName, fullArguments);
 
             if (createTag)
             {
@@ -100,7 +104,7 @@ it correctly accepts a project name and a version as its arguments.");
 
         if (process == null)
         {
-            throw new GoCommandoException($"Could not start process with command {fileName} {arguments}");
+            throw new BobException($"Could not start process with command {fileName} {arguments}");
         }
 
         using var outputTimer = new Timer(1000);
@@ -128,7 +132,7 @@ it correctly accepts a project name and a version as its arguments.");
 
         if (!process.WaitForExit(milliseconds: (int)executionTimeout.TotalMilliseconds))
         {
-            throw new GoCommandoException($"Process for command {fileName} {arguments} did not exit within timeout of {executionTimeout}");
+            throw new BobException($"Process for command {fileName} {arguments} did not exit within timeout of {executionTimeout}");
         }
 
         if (process.ExitCode != 0)
@@ -137,7 +141,7 @@ it correctly accepts a project name and a version as its arguments.");
 
             PumpOutput(process);
 
-            throw new GoCommandoException($"Process for command {fileName} {arguments} exited with code {process.ExitCode}");
+            throw new BobException($"Process for command {fileName} {arguments} exited with code {process.ExitCode}");
         }
     }
 
@@ -190,7 +194,7 @@ it correctly accepts a project name and a version as its arguments.");
         }
         catch (FileNotFoundException)
         {
-            throw new GoCommandoException($@"Could not find changelog '{path}'.
+            throw new BobException($@"Could not find changelog '{path}'.
 
 Please create a changelog at the path shown above, and use a format where
 versions are added like this:
@@ -311,7 +315,7 @@ etc.");
     static string TrimHeaderAndFooter(string changelog)
     {
         var indexOfFirstEntry = changelog.IndexOf("##");
-        if (indexOfFirstEntry < 0) throw new GoCommandoException("Could not find any entries in changelog");
+        if (indexOfFirstEntry < 0) throw new BobException("Could not find any entries in changelog");
 
         var withoutHeader = changelog.Substring(indexOfFirstEntry);
         var indexOfFooterMark = withoutHeader.IndexOf("---");
@@ -321,13 +325,34 @@ etc.");
         return withoutFooter;
     }
 
-    protected void Run(string scriptToRun, bool createTag = false)
+    /// <summary>
+    /// Runs the script with the given name (without extension) from the 'scripts' folder of the current directory,
+    /// i.e. 'scripts/{scriptName}.cmd' on Windows and 'scripts/{scriptName}.sh' everywhere else
+    /// </summary>
+    protected void Run(string scriptName, bool createTag = false)
     {
         var currentDirectory = Environment.CurrentDirectory;
         var projectName = currentDirectory.Split(Path.DirectorySeparatorChar).Last();
-        var script = Path.Combine(currentDirectory, "scripts", scriptToRun);
+        var extension = OperatingSystem.IsWindows() ? ".cmd" : ".sh";
+        var script = Path.Combine(currentDirectory, "scripts", scriptName + extension);
 
         Run(script, projectName, currentDirectory, createTag);
+    }
+
+    /// <summary>
+    /// Gets the file name and arguments necessary to execute the given script. On Windows, .cmd files can be executed
+    /// directly. On other platforms, .sh files are executed directly when they have the executable bit set (so their
+    /// shebang line is respected), otherwise they're passed to /bin/sh
+    /// </summary>
+    static (string FileName, string Arguments) GetScriptInvocation(string script, string arguments)
+    {
+        if (OperatingSystem.IsWindows()) return (script, arguments);
+
+        var isExecutable = (File.GetUnixFileMode(script) & UnixFileMode.UserExecute) != 0;
+
+        return isExecutable
+            ? (script, arguments)
+            : ("/bin/sh", $@"""{script}"" {arguments}");
     }
 
     class DummyDisposable : IDisposable

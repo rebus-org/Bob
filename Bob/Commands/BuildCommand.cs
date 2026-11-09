@@ -1,16 +1,6 @@
-﻿using GoCommando;
-// ReSharper disable UnusedMember.Global
+﻿namespace Bob.Commands;
 
-namespace Bob.Commands;
-
-[Command("build")]
-[Description("Builds the Rebus project")]
-public class BuildCommand : BaseCommand, ICommand
+public class BuildCommand : BaseCommand
 {
-    public void Run()
-    {
-        const string scriptToRun = "build.cmd";
-
-        Run(scriptToRun);
-    }
+    public override void Run() => Run("build");
 }

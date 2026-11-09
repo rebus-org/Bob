@@ -1,17 +1,8 @@
-﻿using GoCommando;
-// ReSharper disable ArgumentsStyleLiteral
-// ReSharper disable UnusedMember.Global
+﻿// ReSharper disable ArgumentsStyleLiteral
 
 namespace Bob.Commands;
 
-[Command("release")]
-[Description("Builds the Rebus project")]
-public class ReleaseCommand : BaseCommand, ICommand
+public class ReleaseCommand : BaseCommand
 {
-    public void Run()
-    {
-        const string scriptToRun = "release.cmd";
-
-        Run(scriptToRun, createTag: true);
-    }
+    public override void Run() => Run("release", createTag: true);
 }
